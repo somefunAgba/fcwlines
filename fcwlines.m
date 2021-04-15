@@ -18,8 +18,8 @@ function varargout = fcwlines(norm_rgb,bolden,format,varargin)
 % Specs.
 arguments
     norm_rgb (1,3) {mustBeNumeric} = [0 0 1]
-    bolden  {mustBeNumeric} = 1
-    format  {mustBeText} = 'Testing fcwlines ...\n'
+    bolden  {mustBeNumeric} = 0
+    format  {mustBeText} = 'Testing fcwlines...\nMultiLine Here.\nWindows and Problems,\nAll for OS.\nSave from bugs\nEasy to Understand,\nCorrect now and in the future!\n\n'
 end
 %
 arguments(Repeating)
@@ -68,55 +68,70 @@ mde = com.mathworks.mde.desk.MLDesktop.getInstance;
 cw = mde.getClient('Command Window');
 xCmdWndView = cw.getComponent(0).getViewport.getComponent(0);
 
-% print string.
-if bolden == 1
-    format = compose("<strong>" + format + "</strong>");
-end
-countStr = fprintf(2,format,varargin{:}); %#ok<NASGU>
+% to do: separate format into separate text arrays based on newline break
+% then pass to get its instance.
 
-% repaint line
-drawnow;
-xCmdWndView.repaint;
-
-% Get the Document Element(s) corresponding to the latest fprintf operation
-docElement = cwDoc.getParagraphElement(cwlastPos+1);
-startOff = docElement.getStartOffset;
-cwlastPos = cwDoc.getLength;
-id = 0;
-
-if startOff >=cwlastPos
-    error('something wrong!')
+format = splitlines(compose(string(format)));
+% remove empty string characters, if it exists at the end of the array
+if format(end) == ""
+    format(end) = [];
 end
 
 status = 0;
-while startOff < cwlastPos
-    % set the element style according to the current style
-    formatDocElems(docElement,colorstyle);
-    % get the current line position
-    docElement = cwDoc.getParagraphElement(cwlastPos+1);
-    % compare if the start-offset has reached the last pos
-    startOff = docElement.getStartOffset;
-    
-    % to possibly prevent extended long loop times.
-    id = id + 1;    
-    if startOff >= cwlastPos
-        status = 1;
-        if id > 64
-            break;
-        end
+for sd = 1:numel(format)
+    str = format(sd);
+    % print string.
+    if bolden == 1
+        str = "<strong>" + str + "</strong>\n";
+    else
+        str = str + "\n";
     end
+    
+    countStr = fprintf(2,str,varargin{:}); %#ok<NASGU>
+    
+    % repaint line
+    drawnow;
+    xCmdWndView.repaint;
+    
+    % Get the Document Element(s) corresponding to the latest fprintf operation
+    docElement = cwDoc.getParagraphElement(cwlastPos+1);
+    startOff = docElement.getStartOffset;
+    cwlastPos = cwDoc.getLength;
+    id = 0;
+    
+    if startOff > cwlastPos
+        error('something wrong!')
+    end
+    
+    
+    while startOff < cwlastPos
+        % set the element style according to the current style
+        formatDocElems(docElement,colorstyle);
+        % get the current line position
+        docElement = cwDoc.getParagraphElement(cwlastPos+1);
+        % compare if the start-offset has reached the last pos
+        startOff = docElement.getStartOffset;
+        cwlastPos = cwDoc.getLength;
+        
+        % to possibly prevent extended long loop times.
+        id = id + 1;
+        if startOff >= cwlastPos
+            status = 1;
+        end
+        
+    end
+    
+    % repaint line
+    drawnow;
+    xCmdWndView.repaint;
 
 end
-
-% repaint line
-drawnow limitrate;
-xCmdWndView.repaint;
 
 % status
 if nargout == 1
     varargout{1} = status;
 end
-
+%     
 % --- setformatting
 % Set a CW doc element to a particular color
     function formatDocElems(docElement,colorstyle)
@@ -135,7 +150,7 @@ end
                 
                 jStyle = java.lang.String(colorstyle);
                 
-                for idx = 1:n-1
+                for idx = 1:n
                     styles(idx) = jStyle;
                 end
                 oldStyles{end} = [oldStyles{end} cell(styles)];
