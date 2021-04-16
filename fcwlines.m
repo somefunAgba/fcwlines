@@ -77,6 +77,11 @@ if format(end) == ""
     format(end) = [];
 end
 
+% detect multiline format after split
+fmts = count(format,'%'+lettersPattern(1));
+% fid, lid as range for varargin
+fid = 0;
+
 status = 0;
 for sd = 1:numel(format)
     str = format(sd);
@@ -87,7 +92,9 @@ for sd = 1:numel(format)
         str = str + "\n";
     end
     
-    countStr = fprintf(2,str,varargin{:}); %#ok<NASGU>
+    lid = fid + fmts(sd);
+    countStr = fprintf(2,str,varargin{fid+1:lid}); %#ok<NASGU>
+    fid = lid; 
     
     % repaint line
     drawnow;
@@ -122,7 +129,7 @@ for sd = 1:numel(format)
     end
     
     % repaint line
-    drawnow;
+    drawnow limitrate;
     xCmdWndView.repaint;
 
 end
@@ -150,7 +157,7 @@ end
                 
                 jStyle = java.lang.String(colorstyle);
                 
-                for idx = 1:n
+                for idx = 1:n-1
                     styles(idx) = jStyle;
                 end
                 oldStyles{end} = [oldStyles{end} cell(styles)];
